@@ -46,6 +46,7 @@ export async function getProof(eth_getStorageAt: EthGetStorageAt, eth_getProof: 
 	const priceAccumulatorSlot = (denominationToken === token0Address) ? 10n : 9n
 	const proof = await eth_getProof(exchangeAddress, [8n, priceAccumulatorSlot], blockNumber)
 	const block = await eth_getBlockByNumber(blockNumber)
+
 	if (block === null) throw new Error(`Received null for block ${Number(blockNumber)}`)
 	const blockRlp = rlpEncodeBlock(block)
 	const accountProofNodesRlp = rlpEncode(proof.accountProof.map(rlpDecode))
@@ -95,7 +96,7 @@ export async function getPrice(eth_getStorageAt: EthGetStorageAt, eth_getBlockBy
 	return accumulatorDelta / timeDelta
 }
 
-function rlpEncodeBlock(block: Block) {
+export function rlpEncodeBlock(block: Block) {
 	return rlpEncode([
 		unsignedIntegerToUint8Array(block.parentHash, 32),
 		unsignedIntegerToUint8Array(block.sha3Uncles, 32),

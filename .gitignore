@@ -4,3 +4,5 @@ generated/
 /**/output*/*
 !**/output-esm/package.json
 !**/output-cjs/package.json
+
+.vscode

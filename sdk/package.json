@@ -14,9 +14,9 @@
 	},
 	"devDependencies": {
 		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
-		"typescript": "3.9.3",
 		"ts-node": "8.10.1",
-		"ttypescript": "1.5.10"
+		"ttypescript": "1.5.10",
+		"typescript": "3.9.3"
 	},
 	"scripts": {
 		"build": "npx ttsc --project ./tsconfig-esm.json && npx ttsc --project ./tsconfig-cjs.json",

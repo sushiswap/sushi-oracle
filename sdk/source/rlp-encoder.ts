@@ -68,7 +68,7 @@ function rlpEncodeLarge(data: Uint8Array): Uint8Array {
 	return result
 }
 
-function hexStringToUint8Array(hex: string): Uint8Array {
+export function hexStringToUint8Array(hex: string): Uint8Array {
 	const match = new RegExp(`^(?:0x)?([a-fA-F0-9]*)$`).exec(hex)
 	if (match === null) throw new Error(`Expected a hex string encoded byte array with an optional '0x' prefix but received ${hex}`)
 	const maybeLeadingZero = (match[1].length % 2) ? '0' : ''

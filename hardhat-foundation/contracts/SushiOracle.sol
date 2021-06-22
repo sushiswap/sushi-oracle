@@ -7,7 +7,7 @@ import { Rlp } from "./Rlp.sol";
 import { IUniswapV2Pair } from "./IUniswapV2Pair.sol";
 import { UQ112x112 } from "./UQ112x112.sol";
 
-contract UniswapOracle {
+contract SushiOracle {
 	using UQ112x112 for uint224;
 
 	bytes32 public constant reserveTimestampSlotHash = keccak256(abi.encodePacked(uint256(8)));
@@ -21,21 +21,21 @@ contract UniswapOracle {
 		bytes priceAccumulatorProofNodesRlp;
 	}
 
-	function getAccountStorageRoot(address uniswapV2Pair, ProofData memory proofData) public view returns (bytes32 storageRootHash, uint256 blockNumber, uint256 blockTimestamp) {
+	function getAccountStorageRoot(address uniswapV2Pair, ProofData memory proofData, bytes32 blockHash) public view returns (bytes32 storageRootHash, uint256 blockNumber, uint256 blockTimestamp) {
 		bytes32 stateRoot;
-		(stateRoot, blockTimestamp, blockNumber) = BlockVerifier.extractStateRootAndTimestamp(proofData.block);
+		(stateRoot, blockTimestamp, blockNumber) = BlockVerifier.extractStateRootAndTimestamp(proofData.block, blockHash);
 		bytes memory accountDetailsBytes = MerklePatriciaVerifier.getValueFromProof(stateRoot, keccak256(abi.encodePacked(uniswapV2Pair)), proofData.accountProofNodesRlp);
 		Rlp.Item[] memory accountDetails = Rlp.toList(Rlp.toItem(accountDetailsBytes));
 		return (Rlp.toBytes32(accountDetails[2]), blockNumber, blockTimestamp);
 	}
 
 	// This function verifies the full block is old enough (MIN_BLOCK_COUNT), not too old (or blockhash will return 0x0) and return the proof values for the two storage slots we care about
-	function verifyBlockAndExtractReserveData(IUniswapV2Pair uniswapV2Pair, uint8 minBlocksBack, uint8 maxBlocksBack, bytes32 slotHash, ProofData memory proofData) public view returns
+	function verifyBlockAndExtractReserveData(IUniswapV2Pair uniswapV2Pair, bytes32 slotHash, ProofData memory proofData, bytes32 blockHash) public view returns
 	(uint256 blockTimestamp, uint256 blockNumber, uint256 priceCumulativeLast, uint112 reserve0, uint112 reserve1, uint256 reserveTimestamp) {
 		bytes32 storageRootHash;
-		(storageRootHash, blockNumber, blockTimestamp) = getAccountStorageRoot(address(uniswapV2Pair), proofData);
-		require (blockNumber <= block.number - minBlocksBack, "Proof does not span enough blocks");
-		require (blockNumber >= block.number - maxBlocksBack, "Proof spans too many blocks");
+		(storageRootHash, blockNumber, blockTimestamp) = getAccountStorageRoot(address(uniswapV2Pair), proofData, blockHash);
+		// require (blockNumber <= block.number - minBlocksBack, "Proof does not span enough blocks");
+		// require (blockNumber >= block.number - maxBlocksBack, "Proof spans too many blocks");
 
 		priceCumulativeLast = Rlp.rlpBytesToUint256(MerklePatriciaVerifier.getValueFromProof(storageRootHash, slotHash, proofData.priceAccumulatorProofNodesRlp));
 		uint256 reserve0Reserve1TimestampPacked = Rlp.rlpBytesToUint256(MerklePatriciaVerifier.getValueFromProof(storageRootHash, reserveTimestampSlotHash, proofData.reserveAndTimestampProofNodesRlp));
@@ -44,9 +44,9 @@ contract UniswapOracle {
 		reserve0 = uint112(reserve0Reserve1TimestampPacked & (2**112 - 1));
 	}
 
-	function getPrice(IUniswapV2Pair uniswapV2Pair, address denominationToken, uint8 minBlocksBack, uint8 maxBlocksBack, ProofData memory proofData) public view returns (uint256 price, uint256 blockNumber) {
+	function getPrice(IUniswapV2Pair uniswapV2Pair, address denominationToken, uint256 blockNum, ProofData memory proofData) public view returns (uint256 price, uint256 blockNumber) {
 		// exchange = the ExchangeV2Pair. check denomination token (USE create2 check?!) check gas cost
-		bool denominationTokenIs0;
+		bool denominationTokenIs0 = true;
 		if (uniswapV2Pair.token0() == denominationToken) {
 			denominationTokenIs0 = true;
 		} else if (uniswapV2Pair.token1() == denominationToken) {
@@ -54,10 +54,10 @@ contract UniswapOracle {
 		} else {
 			revert("denominationToken invalid");
 		}
-		return getPriceRaw(uniswapV2Pair, denominationTokenIs0, minBlocksBack, maxBlocksBack, proofData);
+		return getPriceRaw(uniswapV2Pair, denominationTokenIs0, proofData, blockhash(blockNum));
 	}
 
-	function getPriceRaw(IUniswapV2Pair uniswapV2Pair, bool denominationTokenIs0, uint8 minBlocksBack, uint8 maxBlocksBack, ProofData memory proofData) public view returns (uint256 price, uint256 blockNumber) {
+	function getPriceRaw(IUniswapV2Pair uniswapV2Pair, bool denominationTokenIs0, ProofData memory proofData, bytes32 blockHash) public view returns (uint256 price, uint256 blockNumber) {
 		uint256 historicBlockTimestamp;
 		uint256 historicPriceCumulativeLast;
 		{
@@ -66,7 +66,7 @@ contract UniswapOracle {
 			uint112 reserve0;
 			uint112 reserve1;
 			uint256 reserveTimestamp;
-			(historicBlockTimestamp, blockNumber, historicPriceCumulativeLast, reserve0, reserve1, reserveTimestamp) = verifyBlockAndExtractReserveData(uniswapV2Pair, minBlocksBack, maxBlocksBack, denominationTokenIs0 ? token1Slot : token0Slot, proofData);
+			(historicBlockTimestamp, blockNumber, historicPriceCumulativeLast, reserve0, reserve1, reserveTimestamp) = verifyBlockAndExtractReserveData(uniswapV2Pair, denominationTokenIs0 ? token1Slot : token0Slot, proofData, blockHash);
 			uint256 secondsBetweenReserveUpdateAndHistoricBlock = historicBlockTimestamp - reserveTimestamp;
 			// bring old record up-to-date, in case there was no cumulative update in provided historic block itself
 			if (secondsBetweenReserveUpdateAndHistoricBlock > 0) {

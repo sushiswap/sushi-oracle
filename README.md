@@ -1,4 +1,4 @@
-# uniswap-oracle
+# sushi-oracle
 A general purpose price feed oracle built on Uniswap v2 that supports arbitrary time windows (up to 256 blocks) and doesn't require any active maintenance.
 
 ## 🎊 Finally, an on-chain trustless and censorship resistant oracle! 🎉
