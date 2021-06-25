@@ -12,6 +12,55 @@ library MerklePatriciaVerifier {
 	 *
 	 * WARNING: Does not currently support validation of unset/0 values!
 	 */
+
+	// function prepareProofData(bytes32 expectedRoot, bytes32 path, bytes memory proofNodesRlp) public pure returns (Rlp.Item[][] memory nodes) {
+	// 	Rlp.Item memory rlpParentNodes = Rlp.toItem(proofNodesRlp);
+	// 	Rlp.Item[] memory parentNodes = Rlp.toList(rlpParentNodes);
+
+	// 	bytes memory currentNode;
+	// 	Rlp.Item[] memory currentNodeList;
+
+	// 	bytes32 nodeKey = expectedRoot;
+	// 	uint pathPtr = 0;
+
+	// 	// our input is a 32-byte path, but we have to prepend a single 0 byte to that and pass it along as a 33 byte memory array since that is what getNibbleArray wants
+	// 	bytes memory nibblePath = new bytes(33);
+	// 	assembly { mstore(add(nibblePath, 33), path) }
+
+	// 	require(path.length != 0, "empty path provided");
+
+	// 	currentNode = Rlp.toBytes(parentNodes[0]);
+
+	// 	for (uint i=0; i<parentNodes.length; i++) {
+	// 		require(pathPtr <= nibblePath.length, "Path overflow");
+
+	// 		nodes[nodes.length-1] = Rlp.toList(parentNodes[i]);
+
+	// 		if(currentNodeList.length == 17) {
+	// 			if(pathPtr == nibblePath.length) {
+	// 				return nodes;
+	// 			}
+	// 			uint8 nextPathNibble = uint8(nibblePath[pathPtr]);
+	// 			require(nextPathNibble <= 16, "nibble too long");
+	// 			nodeKey = Rlp.toBytes32(nodes[nodes.length-1][nextPathNibble]);
+	// 			pathPtr += 1;
+	// 		} else if(currentNodeList.length == 2) {
+	// 			pathPtr += _nibblesToTraverse(Rlp.toData(nodes[nodes.length-1][0]), nibblePath, pathPtr);
+	// 			// leaf node
+	// 			if(pathPtr == nibblePath.length) {
+	// 				return nodes;
+	// 			}
+	// 			//extension node
+	// 			require(_nibblesToTraverse(Rlp.toData(currentNodeList[0]), nibblePath, pathPtr) != 0, "invalid extension node");
+
+	// 			nodeKey = Rlp.toBytes32(currentNodeList[1]);
+	// 		} else {
+	// 			require(false, "unexpected length array");
+	// 		}
+	// 	}
+	// 	require(false, "not enough proof nodes");
+	// }
+
 	function getValueFromProof(bytes32 expectedRoot, bytes32 path, bytes memory proofNodesRlp) internal pure returns (bytes memory) {
 		Rlp.Item memory rlpParentNodes = Rlp.toItem(proofNodesRlp);
 		Rlp.Item[] memory parentNodes = Rlp.toList(rlpParentNodes);
@@ -36,6 +85,7 @@ library MerklePatriciaVerifier {
 
 			currentNode = Rlp.toBytes(parentNodes[i]);
 			require(nodeKey == keccak256(currentNode), "node doesn't match key");
+
 			currentNodeList = Rlp.toList(parentNodes[i]);
 
 			if(currentNodeList.length == 17) {

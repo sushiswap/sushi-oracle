@@ -126,8 +126,8 @@ library Rlp {
 	/// @param self The Item.
 	/// @return The number of items.
 	function items(Item memory self) internal pure returns (uint) {
-		if (!isList(self))
-			return 0;
+		// if (!isList(self))
+		// 	return 0;
 		uint b0;
 		uint memPtr = self._unsafe_memPtr;
 		assembly {
